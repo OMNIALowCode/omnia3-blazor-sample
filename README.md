@@ -72,4 +72,14 @@ Now that you can use the sample "Order Management" app, we encourage you to make
 
 We recommend that you start by analyzing how the "Product List" page component (Pages/ProductListPage.razor) is built before proceeding into more complex scenarios e.g. Order/Product creation.
 
+# 3. Deploy your app
+
+If you want to deploy the web app it is as simple as:
+
+1. Run the following commands on the project root directory:
+    - `dotnet publish .\omnia-blazor-demo.csproj -c Release`
+2. Copy the "bin/Release/net5.0/publish/wwwroot" directory into a static web-host provider. (E.g. [Netlifly](https://www.netlify.com/) free service)
+
+Make sure to update the wwwroot/appSettings.json and OMNIA's web app api client configuration accordingly to the deployment url. Otherwise the authentication process will not work.
+
 
