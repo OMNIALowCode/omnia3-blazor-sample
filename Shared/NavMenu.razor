@@ -1,0 +1,67 @@
+﻿<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">OMNIA Demo App</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+
+
+<AuthorizeView>
+    <Authorized>
+        <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+            <RadzenPanelMenu>
+                <RadzenPanelMenuItem Text="Home" Path="/dashboard" Icon="home" />
+                <RadzenPanelMenuItem Text="Orders" Icon="request_quote">
+                    <RadzenPanelMenuItem Text="New order" Path="/new-order" Icon="add"></RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="All orders" Path="/orders" Icon="list"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+                 <RadzenPanelMenuItem Text="Clients" Icon="assignment_ind">
+                    <RadzenPanelMenuItem Text="New client" Path="/new-client" Icon="add"></RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="All clients" Path="/clients" Icon="list"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+                <RadzenPanelMenuItem Text="Products" Icon="save">
+                    <RadzenPanelMenuItem Text="New product" Path="/new-product" Icon="add"></RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="All products" Path="/products" Icon="list"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+                <RadzenPanelMenuItem Text="Sales Person" Icon="person">
+                    <RadzenPanelMenuItem Text="New sales person" Path="/new-salesperson" Icon="add">
+                    </RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="All sales person" Path="/salesperson" Icon="list"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+                <RadzenPanelMenuItem Text="VAT Taxes" Icon="loupe">
+                    <RadzenPanelMenuItem Text="New vat tax" Path="/new-vatTax" Icon="add">
+                    </RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="All vat taxes" Path="/vatTaxes" Icon="list"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem>
+            </RadzenPanelMenu>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+
+    </NotAuthorized>
+</AuthorizeView>
+
+
+
+
+
+
+
+@code {
+    private bool collapseNavMenu = true;
+
+
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+
+
+    private void ToggleNavMenu()
+
+    {
+
+        collapseNavMenu = !collapseNavMenu;
+
+    }
+}

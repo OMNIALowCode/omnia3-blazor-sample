@@ -1,0 +1,253 @@
+@page "/dashboard"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using System.Globalization
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject NotificationService NotificationService
+@inject ProgressBarService ProgressBarService
+@inject OmniaClient OmniaClient
+
+<h1>Dashboard</h1>
+
+<hr>
+
+<div class="row">
+    <div class="col-xl-6">
+        <RadzenCard >
+            <RadzenChart>
+                <TitleTemplate>
+                        <div class="rz-donut-content">
+                            <div>Sales per month</div>
+                        </div>
+                    </TitleTemplate>
+                <RadzenLineSeries Smooth="false" Data="@revenue2021" CategoryProperty="Date" Title="2021"
+                    LineType="LineType.Dashed" ValueProperty="Revenue">
+                    <RadzenMarkers MarkerType="MarkerType.Square" />
+                </RadzenLineSeries>
+                <RadzenLineSeries Smooth="false" Data="@revenue2020" CategoryProperty="Date" Title="2020" ValueProperty="Revenue">
+                    <RadzenMarkers MarkerType="MarkerType.Circle" />
+                </RadzenLineSeries>
+                <RadzenCategoryAxis Padding="20" FormatString="{0:MMM}" />
+                <RadzenValueAxis Formatter="@FormatAsEUR">
+                    <RadzenGridLines Visible="true" />
+                    <RadzenAxisTitle Text="Revenue in EUR" />
+                </RadzenValueAxis>
+            </RadzenChart>
+        </RadzenCard>
+    </div>
+    <div class="col-xl-6">
+        <RadzenCard >
+            <RadzenChart>
+                <TitleTemplate>
+                        <div class="rz-donut-content">
+                            <div>Sales per salesperson</div>
+                        </div>
+                    </TitleTemplate>
+                <RadzenPieSeries Data="@salesPerSalesPerson" Title="Sales" CategoryProperty="salesperson" ValueProperty="ammount" >
+                    <TooltipTemplate Context="data">
+                        <div>
+                            <span>@data._name</span>:
+                            <strong>@formatMoney(data.ammount)</strong>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenPieSeries>
+            </RadzenChart>
+        </RadzenCard>
+    </div>
+</div>
+    <br>
+<div class="row">
+    <div class="col-xl-6">
+        <RadzenCard >
+            <RadzenChart>
+                <RadzenDonutSeries Data="@salesPerClient" Title="Sales" CategoryProperty="client" ValueProperty="ammount">
+                    <TitleTemplate>
+                        <div class="rz-donut-content">
+                            <div>Sales</div> 
+                            <div>per client</div>
+                        </div>
+                    </TitleTemplate>
+                    <TooltipTemplate Context="data">
+                        <div>
+                            <span>@data._name</span>:
+                            <strong>@formatMoney(data.ammount)</strong>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenDonutSeries>
+            </RadzenChart>
+        </RadzenCard>
+    </div>
+    <div class="col-xl-6">
+        <RadzenCard >
+            <RadzenChart>
+                <RadzenDonutSeries Data="@salesPerProduct" Title="Sales" CategoryProperty="product" ValueProperty="ammount">
+                    <TitleTemplate>
+                        <div class="rz-donut-content">
+                            <div>Sales</div> 
+                            <div>per product</div>
+                        </div>
+                    </TitleTemplate>
+                    <TooltipTemplate Context="data">
+                        <div>
+                            <span>@data._name</span>:
+                            <strong>@formatMoney(data.ammount)</strong>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenDonutSeries>
+            </RadzenChart>
+        </RadzenCard>
+    </div>
+</div>
+
+
+
+
+<hr>
+
+@code {
+
+    private List<DataItem> revenue2021 = new List<DataItem>();
+    private List<DataItem> revenue2020 = new List<DataItem>();
+
+    private List<DataItemQ> revenue2021Q = new List<DataItemQ>();
+    private List<DataItemQ> revenue2020Q = new List<DataItemQ>();
+
+    private List<SalesPerSalesPersonQueryAdvDto> salesPerSalesPerson = new List<SalesPerSalesPersonQueryAdvDto>();
+
+    private List<SalesPerClientQueryAdvDto> salesPerClient = new List<SalesPerClientQueryAdvDto>();
+
+    private List<SalesPerProductQueryAdvDto> salesPerProduct = new List<SalesPerProductQueryAdvDto>();
+
+    private async Task<List<SalesPerSalesPersonQueryAdvDto>> getSalesPerSalesPerson()
+    {
+        return await OmniaClient.ExecuteQuery<SalesPerSalesPersonQueryAdvDto>(new QueryMetadata{
+            Tenant = Configuration["TenantCode"],
+            Query = "SalesPerSalesPersonQueryAdv"
+        });
+    }
+
+    private async Task<List<SalesPerClientQueryAdvDto>> getSalesPerClient()
+    {
+        return await OmniaClient.ExecuteQuery<SalesPerClientQueryAdvDto>(new QueryMetadata{
+            Tenant = Configuration["TenantCode"],
+            Query = "SalesPerClientQueryAdv"
+        });
+    }
+
+    private async Task<List<SalesPerProductQueryAdvDto>> getSalesPerProduct()
+    {
+        return await OmniaClient.ExecuteQuery<SalesPerProductQueryAdvDto>(new QueryMetadata{
+            Tenant = Configuration["TenantCode"],
+            Query = "SalesPerProductQueryAdv"
+        });
+    }
+
+    private async Task<List<DataItem>> getMonthlyData(int year)
+    {
+        var rawData = await OmniaClient.ExecuteQuery<MonthlySalesQueryAdvDto>(new QueryMetadata{
+            Tenant = Configuration["TenantCode"],
+            Query = "MonthlySalesQueryAdv",
+            parameters = new List<QueryParameter>{
+                new QueryParameter{
+                    name = "year",
+                    value = $"{year}"
+                }
+            }
+        });
+
+        return rawData.Select(x=>
+        {
+            return new DataItem{
+                Date=new DateTime(2019,(int)x.month,1),
+                Revenue = x.ammount
+            };
+        }).ToList();
+    } 
+
+    private async Task<List<DataItemQ>> getQuarterData(int year)
+    {
+        var rawData = await OmniaClient.ExecuteQuery<QuarterSalesQueryAdvDto>(new QueryMetadata{
+            Tenant = Configuration["TenantCode"],
+            Query = "QuarterSalesQueryAdv",
+            parameters = new List<QueryParameter>{
+                new QueryParameter{
+                    name = "year",
+                    value = $"{year}"
+                }
+            }
+        });
+
+        return rawData.Select(x=>
+        {
+            return new DataItemQ{
+                Quarter=$"{x.quarter}",
+                Revenue = x.ammount
+            };
+        }).ToList();
+    } 
+
+    protected override async Task OnInitializedAsync()
+    {
+        ProgressBarService.Show();
+        try{
+            revenue2020 = await getMonthlyData(2020);
+            revenue2021 = await getMonthlyData(2021);
+
+            revenue2020Q = await getQuarterData(2020);
+            revenue2021Q = await getQuarterData(2021);
+
+            salesPerSalesPerson = await getSalesPerSalesPerson();
+            salesPerClient = await getSalesPerClient();
+            salesPerProduct = await getSalesPerProduct();
+
+        }catch(Exception exception)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = exception.Message,
+                Duration = 10000
+            });
+        }
+        StateHasChanged();
+        ProgressBarService.Hide();
+
+        
+    }
+
+    class DataItem
+    {
+        public DateTime Date { get; set; }
+        public double Revenue { get; set; }
+    }
+
+    class DataItemQ
+    {
+        public string Quarter { get; set; }
+        public double Revenue { get; set; }
+    }
+
+    string FormatAsEUR(object value)
+    {
+        return ((double)value).ToString("C0", CultureInfo.CreateSpecificCulture("pt-PT"));
+    }
+
+
+    private string formatMoney(decimal? value)
+    {
+        double dv = ((double?)value) ?? 0.0;
+
+        return $"{dv.ToString("N", CultureInfo.InvariantCulture)} €";
+    }
+
+
+
+
+
+}

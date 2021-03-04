@@ -1,0 +1,42 @@
+@using Radzen
+@inject ProgressBarService ProgressBarService
+
+<style>
+    .rz-progressbar-value{
+        border-radius:0px;
+        background-color: #ffffff;//#6ec96e
+    }
+</style>
+
+<RadzenProgressBar
+    Value=@value
+    ShowValue="false"
+    Mode=@mode
+    Style="border-radius:0px;height:0.30rem" 
+/>
+
+@code
+{
+    private int value = 100;
+    private ProgressBarMode mode = ProgressBarMode.Determinate;
+
+    protected override void OnInitialized()
+    {
+        ProgressBarService.OnShow += ShowSpinner;
+        ProgressBarService.OnHide += HideSpinner;
+    }
+
+    public void ShowSpinner()
+    {
+        mode = ProgressBarMode.Indeterminate;
+        value = 100;
+        StateHasChanged();
+    }
+
+    public void HideSpinner()
+    {
+        mode = ProgressBarMode.Determinate;
+        value = 100;
+        StateHasChanged();
+    }
+}

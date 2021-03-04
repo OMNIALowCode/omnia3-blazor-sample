@@ -1,0 +1,76 @@
+@page "/vatTaxes"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject ProgressBarService ProgressBarService
+@inject OmniaNotification NotificationService
+@inject IJSRuntime JsRuntime
+
+<h1>VAT Taxes</h1>
+
+
+<RadzenGrid Data="vatTaxes" TItem="VatTaxDto">
+    <Columns>
+        <RadzenGridColumn TItem="VatTaxDto" Context="_code" Bubble="false" Filterable="false" Sortable="false"
+            TextAlign="TextAlign.Center" Width="11px">
+            <Template Context="vatTax">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="close" Size="ButtonSize.Small"
+                    Click="@(args => DeleteRow(vatTax._code))">
+                </RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="VatTaxDto" Property="_code" Title="Code">
+            <Template Context="vatTaxes">
+                <a href="/new-vatTax/@vatTaxes._code">@vatTaxes._code</a>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="VatTaxDto" Property="_name" Title="Name" />
+        <RadzenGridColumn Width="100px" TItem="VatTaxDto" Property="multiplier" Title="Multiplier" />
+    </Columns>
+</RadzenGrid>
+
+
+@code {
+    EntityMetadata metadata;
+    private List<VatTaxDto> vatTaxes = new List<VatTaxDto>();
+    private async Task LoadData()
+    {
+        ProgressBarService.Show();
+        vatTaxes = await OmniaClient.ExecuteQuery<VatTaxDto>(new QueryMetadata(Configuration, "VatTaxQuery"));
+
+        StateHasChanged();
+        ProgressBarService.Hide();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        metadata = new EntityMetadata(Configuration, "VatTax");
+        await LoadData();
+    }
+
+    private async void DeleteRow(string code)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (confirmed)
+        {
+            ProgressBarService.Show();
+            try
+            {
+                await OmniaClient.DeleteEntity(metadata, code);
+                await LoadData();
+                NotificationService.SendSuccess($"The vat tax '{code}' was succesfully deleted");
+            }
+            catch (Exception exception)
+            {
+                NotificationService.SendError(exception.Message);
+            }
+            ProgressBarService.Hide();
+        }
+    }
+}

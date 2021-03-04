@@ -1,0 +1,20 @@
+@using Radzen
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <div class="main">
+        <div class="top-row px-4 auth">
+            <LoginDisplay />
+        </div>
+        <ProgressBar></ProgressBar>
+        <div class="content px-4">
+            <RadzenNotification />
+            
+            @Body
+        </div>
+    </div>
+</div>

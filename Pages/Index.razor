@@ -1,0 +1,14 @@
+﻿@inject OmniaClient OmniaClient
+
+@page "/"
+
+
+<AuthorizeView>
+    <Authorized>
+        <RedirectToDashboard></RedirectToDashboard>
+    </Authorized>
+    <NotAuthorized>
+        <h1>Welcome!</h1>
+        <h2>Please sign in to continue.</h2>
+    </NotAuthorized>
+</AuthorizeView>

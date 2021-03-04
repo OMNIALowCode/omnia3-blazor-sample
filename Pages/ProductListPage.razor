@@ -1,0 +1,87 @@
+@page "/products"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject ProgressBarService ProgressBarService
+@inject IJSRuntime JsRuntime
+@inject OmniaNotification NotificationService
+
+<h1>Products</h1>
+
+
+<RadzenGrid 
+    Data="products"
+    TItem="ProductDto"
+>
+    <Columns>
+        <RadzenGridColumn TItem="ProductDto" Context="_code" Bubble="false" Filterable="false" Sortable="false"
+            TextAlign="TextAlign.Center" Width="11px">
+            <Template Context="product">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="close" Size="ButtonSize.Small"
+                    Click="@(args => DeleteRow(product._code))">
+                </RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="ProductDto" Property="_code" Title="Code">
+             <Template Context="products">
+                <a href="/new-product/@products._code">@products._code</a>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="ProductDto" Property="_name" Title="Name"/>
+        <RadzenGridColumn Width="100px" TItem="ProductDto" Property="package" Title="Default Vat Tax">
+            <Template Context="product">
+                @vatTaxes.Find(x=>x._code.Equals(product.defaultVatTax))?._name
+            </Template>
+        </RadzenGridColumn>
+    </Columns>
+</RadzenGrid>
+
+
+@code {
+
+    private EntityMetadata metadata;
+    private List<ProductDto> products = new List<ProductDto>();
+    private List<VatTaxDto> vatTaxes = new List<VatTaxDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        metadata = new EntityMetadata(Configuration, "Product");
+        await LoadData();
+    }
+
+    private async Task LoadData(){
+        ProgressBarService.Show();
+        products = await OmniaClient.ExecuteQuery<ProductDto>(new QueryMetadata(Configuration, "ProductQuery"));
+        vatTaxes = await OmniaClient.ExecuteQuery<VatTaxDto>(new QueryMetadata(Configuration, "VatTaxQuery"));
+        
+        StateHasChanged();
+        ProgressBarService.Hide();
+    }
+
+    private async void DeleteRow(string code)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (confirmed)
+        {
+            ProgressBarService.Show();
+            try
+            {
+                await OmniaClient.DeleteEntity(metadata, code);
+                await LoadData();
+                NotificationService.SendSuccess($"The product '{code}' was succesfully deleted");
+            }
+            catch (Exception exception)
+            {
+                NotificationService.SendError(exception.Message);
+            }
+            ProgressBarService.Hide();
+        }
+    }
+
+}

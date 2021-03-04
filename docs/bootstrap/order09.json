@@ -1,0 +1,31 @@
+{
+    "_date": "2020-06-01",
+    "lines": [
+      {
+        "vatTax": "Normal",
+        "product": "P005",
+        "quantity": 940,
+        "unitPrice": 3.5
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P006",
+        "quantity": 630,
+        "unitPrice": 12.25
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P007",
+        "quantity": 575,
+        "unitPrice": 45.90
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P008",
+        "quantity": 40900,
+        "unitPrice": 0.80
+      }
+    ],
+    "client": "C002",
+    "salesPerson": "S002"
+  }

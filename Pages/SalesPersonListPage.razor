@@ -1,0 +1,79 @@
+@page "/salesperson"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject ProgressBarService ProgressBarService
+@inject OmniaNotification NotificationService
+@inject IJSRuntime JsRuntime
+
+<h1>Sales Person</h1>
+
+
+<RadzenGrid Data="salesPerson" TItem="SalesPersonDto">
+    <Columns>
+        <RadzenGridColumn TItem="SalesPersonDto" Context="_code" Bubble="false" Filterable="false" Sortable="false"
+            TextAlign="TextAlign.Center" Width="7px">
+            <Template Context="salePerson">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="close" Size="ButtonSize.Small"
+                    Click="@(args => DeleteRow(salePerson._code))">
+                </RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="SalesPersonDto" Property="_code" Title="Code">
+            <Template Context="salesPerson">
+                <a href="/new-salesperson/@salesPerson._code">@salesPerson._code</a>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="SalesPersonDto" Property="_name" Title="Name" />
+    </Columns>
+</RadzenGrid>
+
+
+@code {
+    private EntityMetadata metadata;
+    private List<SalesPersonDto> salesPerson = new List<SalesPersonDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        metadata = new EntityMetadata(Configuration, "SalesPerson");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        ProgressBarService.Show();
+        salesPerson = await OmniaClient.ExecuteQuery<SalesPersonDto>(new QueryMetadata(Configuration, "SalesPersonQuery"));
+
+        StateHasChanged();
+        ProgressBarService.Hide();
+    }
+
+
+    private async void DeleteRow(string code)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (confirmed)
+        {
+            ProgressBarService.Show();
+            try
+            {
+                await OmniaClient.DeleteEntity(metadata, code);
+                await LoadData();
+                NotificationService.SendSuccess($"The sale person '{code}' was succesfully deleted");
+            }
+            catch (Exception exception)
+            {
+                NotificationService.SendError(exception.Message);
+            }
+            ProgressBarService.Hide();
+        }
+    }
+
+
+}

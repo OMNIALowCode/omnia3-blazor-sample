@@ -1,0 +1,37 @@
+{
+    "_date": "2020-07-01",
+    "lines": [
+      {
+        "vatTax": "Reduced",
+        "product": "P002",
+        "quantity": 34500,
+        "unitPrice": 0.45
+      },
+      {
+        "vatTax": "Reduced",
+        "product": "P003",
+        "quantity": 9310,
+        "unitPrice": 0.20
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P006",
+        "quantity": 200,
+        "unitPrice": 12.25
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P007",
+        "quantity": 195,
+        "unitPrice": 45.90
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P008",
+        "quantity": 32000,
+        "unitPrice": 0.90
+      }
+    ],
+    "client": "C002",
+    "salesPerson": "S002"
+  }

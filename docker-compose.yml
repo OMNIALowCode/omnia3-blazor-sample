@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  omnia-blazor-one:
+    build: .
+    ports: 
+      - "5550:80"
+    networks:
+      - omnia-network
+
+networks:
+  omnia-network:
+    external: true

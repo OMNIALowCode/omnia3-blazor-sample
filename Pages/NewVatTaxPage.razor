@@ -1,0 +1,102 @@
+@page "/new-vatTax"
+@page "/new-vatTax/{code}"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject OmniaNotification NotificationService
+@inject NavigationManager NavigationManager
+@inject ProgressBarService ProgressBarService
+
+<h1>@title</h1>
+
+@if (_wrapper != null)
+{
+    <hr>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Code</h4>
+            <RadzenTextBox style="width: 100%;" Placeholder="Code" @bind-Value="_wrapper.Entity._code"
+                Change=@ApplyTemporary />
+        </div>
+        <div class="col-md-6">
+            <h4>Name</h4>
+            <RadzenTextBox style="width: 100%;" Placeholder="Name" @bind-Value="_wrapper.Entity._name"
+                Change=@ApplyTemporary />
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Multiplier</h4>
+            <RadzenNumeric style="width: 100%;" TValue="decimal" Placeholder="Name" @bind-Value="_wrapper.Entity.multiplier"
+                Change=@DecimalChanged />
+        </div>
+    </div>
+
+    <hr>
+    <div style="text-align:right">
+        <RadzenButton Click=@Submit Text="Submit" ButtonStyle="ButtonStyle.Primary" />
+    </div>
+}
+
+@code {
+    [Parameter] public string Code { get; set; }
+
+    public string title { get; set; }
+    private OmniaEntityWrapper<VatTaxDto> _wrapper;
+
+    protected override async Task OnInitializedAsync()
+    {
+        title = string.IsNullOrEmpty(Code) ? "New vat tax" : $"Edit {Code} vat tax";
+        ProgressBarService.Show();
+        try
+        {
+            var metadata = new EntityMetadata(Configuration, "VatTax");
+            _wrapper = await OmniaEntityWrapper<VatTaxDto>.Create(OmniaClient, metadata, Code);
+
+            StateHasChanged();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+        }
+        ProgressBarService.Hide();
+
+    }
+    private void DecimalChanged(decimal value)
+    {
+        ApplyTemporary();
+    }
+
+    private void ApplyTemporary()
+    {
+        ProgressBarService.Show();
+        _wrapper.Sync().ContinueWith((_) =>
+            {
+            ProgressBarService.Hide();
+            StateHasChanged();
+        });
+    }
+
+    private async Task Submit()
+    {
+        ProgressBarService.Show();
+        try
+        {
+            await _wrapper.Save();
+            NotificationService.SendSuccess("The vat tax was succesfully created");
+            NavigationManager.NavigateTo("vatTaxes");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+        }
+        ProgressBarService.Hide();
+    }
+}

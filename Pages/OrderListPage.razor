@@ -1,0 +1,102 @@
+@page "/orders"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using System.Globalization
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject ProgressBarService ProgressBarService
+@inject IJSRuntime JsRuntime
+@inject OmniaNotification NotificationService
+
+<h1>Orders</h1>
+
+
+<RadzenGrid Data="orders" TItem="OrderDto">
+    <Columns>
+        <RadzenGridColumn TItem="OrderDto" Context="_code" Bubble="false" Filterable="false" Sortable="false"
+            TextAlign="TextAlign.Center" Width="15px">
+            <Template Context="order">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="close" Size="ButtonSize.Small"
+                    Click="@(args => DeleteRow(order._code))">
+                </RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="OrderDto" Property="_code" Title="Code">
+            <Template Context="orders">
+                <a href="/new-order/@orders._code">@orders._code</a>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="OrderDto" Property="_number" Title="Number" />
+        <RadzenGridColumn Width="100px" TItem="OrderDto" Property="_date" Title="Date">
+            <Template Context="order">
+                @ConvertDate(order._date)
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="OrderDto" Property="totalWithVat" Title="Total">
+            <Template Context="order">
+                @formatMoney(order.totalWithVat)
+            </Template>
+        </RadzenGridColumn>
+    </Columns>
+</RadzenGrid>
+
+
+@code {
+    private EntityMetadata metadata;
+
+    private List<OrderDto> orders = new List<OrderDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        metadata = new EntityMetadata(Configuration, "Order");
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        ProgressBarService.Show();
+        orders = await OmniaClient.ExecuteQuery<OrderDto>(new QueryMetadata(Configuration, "OrderQuery"));
+
+        StateHasChanged();
+        ProgressBarService.Hide();
+    }
+    private string ConvertDate(string date)
+    {
+        bool converted = DateTime.TryParse(date, out DateTime dateTime);
+
+        return converted ? dateTime.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo) : "";
+    }
+
+    private string formatMoney(decimal? value)
+    {
+        double dv = ((double?)value) ?? 0.0;
+
+        return $"{dv.ToString("N", CultureInfo.InvariantCulture)} €";
+    }
+
+    private async void DeleteRow(string code)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (confirmed)
+        {
+            ProgressBarService.Show();
+            try
+            {
+                await OmniaClient.DeleteEntity(metadata, code);
+                await LoadData();
+                NotificationService.SendSuccess($"The order '{code}' was succesfully deleted");
+            }
+            catch (Exception exception)
+            {
+                NotificationService.SendError(exception.Message);
+            }
+            ProgressBarService.Hide();
+        }
+    }
+
+}

@@ -1,0 +1,75 @@
+@page "/clients"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject ProgressBarService ProgressBarService
+@inject OmniaNotification NotificationService
+@inject IJSRuntime JsRuntime
+
+<h1>Clients</h1>
+
+
+<RadzenGrid Data="clients" TItem="ClientDto">
+    <Columns>
+        <RadzenGridColumn TItem="ClientDto" Context="_code" Bubble="false" Filterable="false" Sortable="false"
+            TextAlign="TextAlign.Center" Width="7px">
+            <Template Context="client">
+                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="close" Size="ButtonSize.Small"
+                    Click="@(args => DeleteRow(client._code))">
+                </RadzenButton>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="ClientDto" Property="_code" Title="Code">
+            <Template Context="clients">
+                <a href="/new-client/@clients._code">@clients._code</a>
+            </Template>
+        </RadzenGridColumn>
+        <RadzenGridColumn Width="100px" TItem="ClientDto" Property="_name" Title="Name" />        
+    </Columns>
+</RadzenGrid>
+
+
+@code {
+    EntityMetadata metadata;
+    private List<ClientDto> clients = new List<ClientDto>();
+    private async Task LoadData()
+    {
+        ProgressBarService.Show();
+        clients = await OmniaClient.ExecuteQuery<ClientDto>(new QueryMetadata(Configuration, "ClientQuery"));
+
+        StateHasChanged();
+        ProgressBarService.Hide();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        metadata = new EntityMetadata(Configuration, "Client");
+        await LoadData();
+    }
+
+    private async void DeleteRow(string code)
+    {
+        bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Are you sure?");
+        if (confirmed)
+        {
+            ProgressBarService.Show();
+            try
+            {
+                await OmniaClient.DeleteEntity(metadata, code);
+                await LoadData();
+                NotificationService.SendSuccess($"The client '{code}' was succesfully deleted");
+            }
+            catch (Exception exception)
+            {
+                NotificationService.SendError(exception.Message);
+            }
+            ProgressBarService.Hide();
+        }
+    }
+}

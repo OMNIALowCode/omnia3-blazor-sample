@@ -1,0 +1,55 @@
+{
+    "_date": "2020-01-01",
+    "lines": [
+      {
+        "vatTax": "Normal",
+        "product": "P001",
+        "quantity": 9000,
+        "unitPrice": 4.20
+      },
+      {
+        "vatTax": "Reduced",
+        "product": "P002",
+        "quantity": 20500,
+        "unitPrice": 0.45
+      },
+      {
+        "vatTax": "Reduced",
+        "product": "P003",
+        "quantity": 7950,
+        "unitPrice": 0.20
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P004",
+        "quantity": 5500,
+        "unitPrice": 0.70
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P005",
+        "quantity": 540,
+        "unitPrice": 3.5
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P006",
+        "quantity": 230,
+        "unitPrice": 12.25
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P007",
+        "quantity": 175,
+        "unitPrice": 45.90
+      },
+      {
+        "vatTax": "Normal",
+        "product": "P008",
+        "quantity": 35900,
+        "unitPrice": 0.80
+      }
+    ],
+    "client": "C001",
+    "salesPerson": "S001"
+  }

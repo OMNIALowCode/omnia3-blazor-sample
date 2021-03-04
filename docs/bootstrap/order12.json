@@ -1,0 +1,19 @@
+{
+    "_date": "2020-07-01",
+    "lines": [
+      {
+        "vatTax": "Reduced",
+        "product": "P002",
+        "quantity": 24500,
+        "unitPrice": 0.43
+      },
+      {
+        "vatTax": "Reduced",
+        "product": "P003",
+        "quantity": 27500,
+        "unitPrice": 0.25
+      }
+    ],
+    "client": "C004",
+    "salesPerson": "S004"
+}

@@ -1,0 +1,267 @@
+@page "/new-order"
+@page "/new-order/{code}"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using System.Globalization
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject ProgressBarService ProgressBarService
+@inject NavigationManager NavigationManager
+@inject OmniaNotification NotificationService
+@inject OmniaClient OmniaClient
+
+<h1>@title</h1>
+
+@if (_wrapper != null)
+{
+    <hr>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <h4>Client</h4>
+            <RadzenDropDown TValue="string" @bind-Value="_wrapper.Entity.client" Change="@ApplyTemporary" Data="@clients"
+                TextProperty="_name" ValueProperty="_code" Style="width:100%" />
+        </div>
+        <div class="col-md-4">
+            <h4>Salesperson</h4>
+            <RadzenDropDown TValue="string" @bind-Value="_wrapper.Entity.salesPerson" Change="@ApplyTemporary"
+                Data="@salesPersons" TextProperty="_name" ValueProperty="_code" Style="width:100%" />
+        </div>
+        <div class="col-md-4">
+            <h4>Date</h4>
+            <RadzenDatePicker style="width:100%" TValue="DateTime?" DateFormat="d" Value=@ConvertDate(_wrapper.Entity._date)
+                Change=@DateChanged Placeholder="Date" />
+        </div>
+    </div>
+
+    <hr>
+
+    <RadzenGrid @ref="orderLinesGrid" EditMode="DataGridEditMode.Single" Data="@_wrapper.Entity.lines" TItem="OrderLineDto"
+        RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow">
+        <Columns>
+            <RadzenGridColumn Width="200px" TItem="OrderLineDto" Property="product" Title="Product">
+                <Template Context="line">
+                    @products.Find(x=>x._code.Equals(line.product))?._name
+                </Template>
+                <EditTemplate Context="line">
+                    <RadzenDropDown TValue="string" @bind-Value="line.product" Change="@ApplyTemporary" Data="@products"
+                        TextProperty="_name" ValueProperty="_code" Style="width:100%" />
+                </EditTemplate>
+                <FooterTemplate>
+                    <RadzenButton Icon="add_circle_outline" Text="Add" Click="@AddElement" />
+                </FooterTemplate>
+            </RadzenGridColumn>
+            <RadzenGridColumn Width="200px" TItem="OrderLineDto" Property="vatTax" Title="Vat Tax">
+                <Template Context="line">
+                    @vatTaxes.Find(x=>x._code.Equals(line.vatTax))?._name
+                </Template>
+                <EditTemplate Context="line">
+                    <RadzenDropDown TValue="string" @bind-Value="line.vatTax" Change="@ApplyTemporary" Data="@vatTaxes"
+                        TextProperty="_name" ValueProperty="_code" Style="width:100%" />
+                </EditTemplate>
+            </RadzenGridColumn>
+            <RadzenGridColumn Width="100px" TItem="OrderLineDto" Title="Unit Price">
+                <Template Context="line">
+                    <div style="text-align: right;">@formatMoney(line.unitPrice)</div>
+
+                </Template>
+                <EditTemplate Context="line">
+                    <RadzenNumeric TValue="decimal?" Value="@line.unitPrice"
+                        Change="(e=>{line.unitPrice=decimal.TryParse(e.Value.ToString(),out decimal x) ? x : 0; ApplyTemporary();})"
+                        Style="width:100%" />
+                </EditTemplate>
+            </RadzenGridColumn>
+
+            <RadzenGridColumn Width="100px" TItem="OrderLineDto" Title="Quantity">
+                <Template Context="line">
+                    <div style="text-align: right;">@line.quantity</div>
+                </Template>
+                <EditTemplate Context="line">
+                    <RadzenNumeric TValue="int?" Value="@line.quantity"
+                        Change="(e=>{line.quantity=int.TryParse(e.Value.ToString(),out int x) ? x : 0; ApplyTemporary();})"
+                        Style="width:100%" />
+                </EditTemplate>
+            </RadzenGridColumn>
+            <RadzenGridColumn Width="100px" TItem="OrderLineDto" Title="Value">
+                <Template Context="line">
+                    <div style="text-align: right;">@formatMoney(line.value)</div>
+                </Template>
+                <FooterTemplate>
+                    <div style="text-align: right;">
+                        <b>Total:</b> @formatMoney(_wrapper.Entity.totalWithoutVat)
+                    </div>
+                </FooterTemplate>
+            </RadzenGridColumn>
+            <RadzenGridColumn TItem="OrderLineDto" Context="line" Bubble="false" Filterable="false" Sortable="false"
+                TextAlign="TextAlign.Center" Width="100px">
+                <Template Context="line">
+                    <RadzenButton Icon="edit" Click="@(args => EditRow(line))">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="line">
+                    <RadzenButton Icon="check" Click="@((args) => SaveRow(line))">
+                    </RadzenButton>
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Click="@(args => DeleteRow(line))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenGridColumn>
+        </Columns>
+    </RadzenGrid>
+
+    <hr>
+
+    <div style="text-align:right">
+
+        <b>Total without Vat:</b> @formatMoney(_wrapper.Entity.totalWithoutVat)<br>
+        <b>Vat:</b> @formatMoney(_wrapper.Entity.vatTotal)<br>
+        <b>Total with Vat:</b> @formatMoney(_wrapper.Entity.totalWithVat)
+
+        <hr>
+
+        <RadzenButton Click=@Submit Text="Submit" ButtonStyle="ButtonStyle.Primary" />
+    </div>
+}
+
+
+@code {
+    [Parameter] public string Code { get; set; }
+
+    public string title { get; set; }
+    private OmniaEntityWrapper<OrderDto> _wrapper;
+    private RadzenGrid<OrderLineDto> orderLinesGrid;
+
+    private List<ProductDto> products = new List<ProductDto>();
+
+    private List<VatTaxDto> vatTaxes = new List<VatTaxDto>();
+
+    private List<SalesPersonDto> salesPersons = new List<SalesPersonDto>();
+
+    private List<ClientDto> clients = new List<ClientDto>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        title = string.IsNullOrEmpty(Code) ? "New order" : $"Edit {Code} order";
+        ProgressBarService.Show();
+
+        try
+        {
+            var metadata = new EntityMetadata(Configuration, "Order");
+
+            _wrapper = await OmniaEntityWrapper<OrderDto>.Create(OmniaClient, metadata, Code);
+            ReRender();
+
+            products = await OmniaClient.ExecuteQuery<ProductDto>(new QueryMetadata(Configuration, "ProductQuery"));
+            vatTaxes = await OmniaClient.ExecuteQuery<VatTaxDto>(new QueryMetadata(Configuration, "VatTaxQuery"));
+            salesPersons = await OmniaClient.ExecuteQuery<SalesPersonDto>(new QueryMetadata(Configuration, "SalesPersonQuery"));
+            clients = await OmniaClient.ExecuteQuery<ClientDto>(new QueryMetadata(Configuration, "ClientQuery"));
+          
+            ReRender();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+        }
+        ProgressBarService.Hide();
+    }
+
+    private void RemoveElement(int i)
+    {
+        _wrapper.Entity.lines.RemoveAt(i);
+        ApplyTemporary();
+    }
+
+    private void DeleteRow(OrderLineDto line)
+    {
+        _wrapper.Entity.lines.Remove(line);
+        ApplyTemporary();
+    }
+
+    private void AddElement()
+    {
+        var line = new OrderLineDto
+        {
+            product = ""
+        };
+        _wrapper.Entity.lines.Add(line);
+        orderLinesGrid.EditRow(line);
+        ApplyTemporary();
+    }
+
+    private void ApplyTemporary()
+    {
+        ProgressBarService.Show();
+        _wrapper.Sync().ContinueWith((_) =>
+            {
+            ProgressBarService.Hide();
+            ReRender();
+        });
+    }
+
+    private async Task Submit()
+    {
+        ProgressBarService.Show();
+        try
+        {
+            await _wrapper.Save();
+            NotificationService.SendSuccess("The order was succesfully placed");
+            NavigationManager.NavigateTo("orders");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+        }
+        ProgressBarService.Hide();
+
+    }
+
+    void DateChanged(DateTime? value)
+    {
+        _wrapper.Entity._date = value?.ToString("yyyy-MM-dd", DateTimeFormatInfo.InvariantInfo);
+        ApplyTemporary();
+    }
+
+    private DateTime? ConvertDate(string date)
+    {
+        return
+            DateTime.TryParseExact(_wrapper.Entity._date, "yyyy-MM-dd", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out
+            DateTime x) ? x : null;
+
+    }
+
+    void OnUpdateRow()
+    {
+
+    }
+
+    void SaveRow(OrderLineDto line)
+    {
+        orderLinesGrid.UpdateRow(line);
+    }
+    void EditRow(OrderLineDto line)
+    {
+        orderLinesGrid.EditRow(line);
+    }
+
+    void OnCreateRow(OrderLineDto line)
+    {
+
+    }
+
+    void ReRender()
+    {
+        StateHasChanged();
+        orderLinesGrid?.Reload();
+    }
+
+    private string formatMoney(decimal? value)
+    {
+        double dv = ((double?)value) ?? 0.0;
+
+        return $"{dv.ToString("N", CultureInfo.InvariantCulture)} €";
+    }
+
+}

@@ -1,0 +1,99 @@
+@page "/new-salesperson"
+@page "/new-salesperson/{code}"
+@attribute [Authorize]
+
+@using Radzen
+@using Shared.DTO
+@using Shared.Model
+@using Microsoft.Extensions.Configuration
+
+@inject IConfiguration Configuration
+@inject OmniaClient OmniaClient
+@inject OmniaNotification NotificationService
+@inject NavigationManager NavigationManager
+@inject ProgressBarService ProgressBarService
+
+<h1>@title</h1>
+
+@if (_wrapper != null)
+{
+    <hr>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Code</h4>
+            <RadzenTextBox style="width: 100%;" Placeholder="Code" @bind-Value="_wrapper.Entity._code"
+                Change=@ApplyTemporary />
+        </div>
+        <div class="col-md-6">
+            <h4>Name</h4>
+            <RadzenTextBox style="width: 100%;" Placeholder="Name" @bind-Value="_wrapper.Entity._name"
+                Change=@ApplyTemporary />
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <div class="col-md-8">
+            <h4>Description</h4>
+            <RadzenTextArea Placeholder="Description" @bind-Value="_wrapper.Entity._description" Change="@ApplyTemporary"
+                style="width: 100%;" />
+        </div>
+    </div>
+
+    <hr>
+    <div style="text-align:right">
+        <RadzenButton Click=@Submit Text="Submit" ButtonStyle="ButtonStyle.Primary" />
+    </div>
+}
+
+@code {
+    [Parameter] public string Code { get; set; }
+
+    public string title { get; set; }
+    private OmniaEntityWrapper<SalesPersonDto> _wrapper;
+
+    protected override async Task OnInitializedAsync()
+    {
+        title = string.IsNullOrEmpty(Code) ? "New sales person" : $"Edit {Code} sales person";
+        ProgressBarService.Show();
+        try
+        {
+            var metadata = new EntityMetadata(Configuration, "SalesPerson");
+            _wrapper = await OmniaEntityWrapper<SalesPersonDto>.Create(OmniaClient, metadata, Code);
+
+            StateHasChanged();
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+
+        }
+        ProgressBarService.Hide();
+
+    }
+
+    private void ApplyTemporary()
+    {
+        ProgressBarService.Show();
+        _wrapper.Sync().ContinueWith((_) =>
+            {
+            ProgressBarService.Hide();
+            StateHasChanged();
+        });
+    }
+
+    private async Task Submit()
+    {
+        ProgressBarService.Show();
+        try
+        {
+            await _wrapper.Save();
+            NotificationService.SendSuccess("The sales person was succesfully created");
+            NavigationManager.NavigateTo("salesperson");
+        }
+        catch (Exception exception)
+        {
+            NotificationService.SendError(exception.Message);
+        }
+        ProgressBarService.Hide();
+    }
+}
